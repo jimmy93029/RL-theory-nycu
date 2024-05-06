@@ -16,7 +16,7 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
 # Define a tensorboard writer
-writer = SummaryWriter("./tb_record_3")
+writer = SummaryWriter("./tb_record_cheetah")
 
 
 def soft_update(target, source, tau):
@@ -120,7 +120,6 @@ class Critic(nn.Module):
         
         ########## YOUR CODE HERE (5~10 lines) ##########
         # Define the forward pass your critic network
-
         x = torch.cat([inputs, actions], 1)
         return self.critic(x)
         ########## END OF YOUR CODE ##########        
@@ -150,16 +149,16 @@ class DDPG(object):
 
     def select_action(self, state, action_noise=None):
         self.actor.eval()
-        action = self.actor(state)
+        action = self.actor(state).view(-1)
 
         ########## YOUR CODE HERE (3~5 lines) ##########
         """
         Add noise to your action for exploration
         Clipping might be needed 
         """
-        if action_noise:
+        if action_noise.all() != None:
             action += torch.Tensor(action_noise)  # Add noise using OUNoise
-        return action.clamp(-2, 2)
+        return action
         ########## END OF YOUR CODE ##########
 
     def update_parameters(self, batch):
@@ -209,9 +208,9 @@ class DDPG(object):
             os.makedirs('preTrained/')
 
         if actor_path is None:
-            actor_path = "preTrained/ddpg_actor_{}_{}_{}".format(env_name, timestamp, suffix) 
+            actor_path = "preTrained_cheetah/ddpg_actor_{}_{}_{}".format(env_name, timestamp, suffix)
         if critic_path is None:
-            critic_path = "preTrained/ddpg_critic_{}_{}_{}".format(env_name, timestamp, suffix) 
+            critic_path = "preTrained_cheetah/ddpg_critic_{}_{}_{}".format(env_name, timestamp, suffix)
         print('Saving models to {} and {}'.format(actor_path, critic_path))
         torch.save(self.actor.state_dict(), actor_path)
         torch.save(self.critic.state_dict(), critic_path)
@@ -263,7 +262,7 @@ def train(env, env_name):
             # Interact with the environment to get new (s, a, r, s') samples
             noise = ounoise.noise()  # disable FloatTensor
             action = agent.select_action(state, noise)
-            next_state, reward, done, _ = env.step([action.item()])
+            next_state, reward, done, _ = env.step(action.view(-1).detach().numpy())
             total_numsteps += 1
 
             # Push the sample to the replay buffer
@@ -291,6 +290,7 @@ def train(env, env_name):
             episode_reward = 0
             while True:
                 action = agent.select_action(state)
+                print(f"action = {action}")
                 next_state, reward, done, _ = env.step(action.detach().numpy()[0])
                 env.render()
                 episode_reward += reward
@@ -316,10 +316,10 @@ def train(env, env_name):
 if __name__ == '__main__':
     # For reproducibility, fix the random seed
     random_seed = 10  
-    env = gym.make('Pendulum-v1')
+    env = gym.make('HalfCheetah-v2')
     env.seed(random_seed)  
     torch.manual_seed(random_seed)
-    env_name = "Pendulum-v1"
+    env_name = "HalfCheetah-v2"
     train(env, env_name)
 
 
