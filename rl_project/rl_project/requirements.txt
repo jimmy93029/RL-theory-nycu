@@ -1,0 +1,13 @@
+numpy
+scipy 
+absl-py
+gdown 
+tqdm 
+flax 
+torch
+ml_collections 
+optax
+tensorboard 
+tensorflow-probability 
+imageio 
+imageio-ffmpeg
